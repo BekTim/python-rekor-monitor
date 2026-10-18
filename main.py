@@ -3,6 +3,7 @@ import base64
 import json
 import os
 from typing import Any
+
 import requests
 
 from merkle_proof import (
