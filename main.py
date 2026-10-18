@@ -2,6 +2,7 @@ import argparse
 import base64
 import json
 import os
+from typing import Any
 
 import requests
 
@@ -16,7 +17,7 @@ from util import extract_public_key, verify_artifact_signature
 REKOR_URL = "https://rekor.sigstore.dev/api/v1"
 
 
-def get_log_entry(log_index, debug=False):
+def get_log_entry(log_index: int, debug: bool = False) -> dict[str, Any]:
     if log_index < 0:
         raise ValueError("Invalid log index")
     if debug:
@@ -28,7 +29,7 @@ def get_log_entry(log_index, debug=False):
     if not isinstance(data, dict) or not data:
         raise ValueError(f"Unexpected response from Rekor for log index {log_index}")
 
-    entry = list(data.values())[0]
+    entry: dict[str, Any] = list(data.values())[0]
     if entry.get("logIndex") != log_index:
         raise ValueError(
             f"Rekor returned entry {entry.get('logIndex')}, expected {log_index}"
@@ -37,12 +38,13 @@ def get_log_entry(log_index, debug=False):
     return entry
 
 
-def get_verification_proof(log_index, debug=False):
+def get_verification_proof(log_index: int, debug: bool = False) -> dict[str, Any]:
     entry = get_log_entry(log_index, debug)
-    return entry["verification"]["inclusionProof"]
+    proof: dict[str, Any] = entry["verification"]["inclusionProof"]
+    return proof
 
 
-def inclusion(log_index, artifact_filepath, debug=False):
+def inclusion(log_index: int, artifact_filepath: str, debug: bool = False) -> None:
     # TODO::
     if not os.path.isfile(artifact_filepath):
         print("Artifact file not found")
@@ -76,18 +78,18 @@ def inclusion(log_index, artifact_filepath, debug=False):
     print("Offline verification successful")
 
 
-def get_latest_checkpoint(debug=False):
+def get_latest_checkpoint(debug: bool = False) -> dict[str, Any]:
     response = requests.get(f"{REKOR_URL}/log")
     if response.status_code != 200:
         raise Exception(f"Rekor error: {response.status_code}")
-    data = response.json()
+    data: dict[str, Any] = response.json()
     if debug:
         with open("checkpoint.json", "w", encoding="utf-8") as checkpoint_file:
             json.dump(data, checkpoint_file, indent=4)
     return data
 
 
-def consistency(prev_checkpoint, debug=False):
+def consistency(prev_checkpoint: dict[str, Any], debug: bool = False) -> None:
     if not prev_checkpoint:
         print("Previous checkpoint is empty")
         return
@@ -122,7 +124,7 @@ def consistency(prev_checkpoint, debug=False):
     print("Consistency verification successful")
 
 
-def main():
+def main() -> None:
     debug = False
     parser = argparse.ArgumentParser(description="Rekor Verifier")
     parser.add_argument(
