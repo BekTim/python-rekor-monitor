@@ -77,7 +77,7 @@ def consistency(prev_checkpoint, debug=False):
         raise Exception(f"Rekor error: {response.status_code}")
     proof = response.json()["hashes"]
 
-    # 5. Проверка
+    # 5. Check
     verify_consistency(
         DefaultHasher,
         prev_checkpoint["treeSize"],   # size1
