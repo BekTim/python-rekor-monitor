@@ -5,13 +5,13 @@ import json
 import requests
 import base64
 import os
-
+REKOR_URL = "https://rekor.sigstore.dev/api/v1"
 def get_log_entry(log_index, debug=False):
     if log_index < 0:
         raise ValueError("Invalid log index")
     if debug:
         print(f"Fetching log entry {log_index} from Rekor")
-    response = requests.get(f"https://rekor.sigstore.dev/api/v1/log/entries?logIndex={log_index}")
+    response = requests.get(f"{REKOR_URL}/log/entries?logIndex={log_index}")
     if response.status_code != 200:
         raise Exception(f"Rekor error: {response.status_code}")
     data = response.json()
@@ -62,7 +62,7 @@ def inclusion(log_index, artifact_filepath, debug=False):
     print("Offline verification successful")
     
 def get_latest_checkpoint(debug=False):
-    response = requests.get("https://rekor.sigstore.dev/api/v1/log")
+    response = requests.get(f"{REKOR_URL}/log")
     if response.status_code != 200:
             raise Exception(f"Rekor error: {response.status_code}")
     data = response.json()
@@ -82,7 +82,7 @@ def consistency(prev_checkpoint, debug=False):
         print("Tree IDs do not match")
         return
 
-    url = f"https://rekor.sigstore.dev/api/v1/log/proof?firstSize={prev_checkpoint['treeSize']}&lastSize={latest['treeSize']}&treeID={latest['treeID']}"
+    url = f"{REKOR_URL}/log/proof?firstSize={prev_checkpoint['treeSize']}&lastSize={latest['treeSize']}&treeID={latest['treeID']}"
     response = requests.get(url)
     if response.status_code != 200:
         raise Exception(f"Rekor error: {response.status_code}")
