@@ -86,7 +86,6 @@ def consistency(prev_checkpoint, debug=False):
         prev_checkpoint["rootHash"],   # root1
         latest["rootHash"],            # root2
     )
-
     print("Consistency verification successful")
     
 def main():
