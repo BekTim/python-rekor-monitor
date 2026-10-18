@@ -15,6 +15,7 @@ from merkle_proof import (
 from util import extract_public_key, verify_artifact_signature
 
 REKOR_URL = "https://rekor.sigstore.dev/api/v1"
+REQUEST_TIMEOUT = 10
 
 
 def get_log_entry(log_index: int, debug: bool = False) -> dict[str, Any]:
@@ -22,7 +23,9 @@ def get_log_entry(log_index: int, debug: bool = False) -> dict[str, Any]:
         raise ValueError("Invalid log index")
     if debug:
         print(f"Fetching log entry {log_index} from Rekor")
-    response = requests.get(f"{REKOR_URL}/log/entries?logIndex={log_index}")
+    response = requests.get(
+        f"{REKOR_URL}/log/entries?logIndex={log_index}", timeout=REQUEST_TIMEOUT
+    )
     if response.status_code != 200:
         raise Exception(f"Rekor error: {response.status_code}")
     data = response.json()
@@ -79,7 +82,8 @@ def inclusion(log_index: int, artifact_filepath: str, debug: bool = False) -> No
 
 
 def get_latest_checkpoint(debug: bool = False) -> dict[str, Any]:
-    response = requests.get(f"{REKOR_URL}/log")
+    response = requests.get(f"{REKOR_URL}/log", timeout=REQUEST_TIMEOUT)
+
     if response.status_code != 200:
         raise Exception(f"Rekor error: {response.status_code}")
     data: dict[str, Any] = response.json()
@@ -107,6 +111,7 @@ def consistency(prev_checkpoint: dict[str, Any], debug: bool = False) -> None:
             "lastSize": latest["treeSize"],
             "treeID": latest["treeID"],
         },
+        timeout=REQUEST_TIMEOUT,
     )
     if response.status_code != 200:
         raise Exception(f"Rekor error: {response.status_code}")
