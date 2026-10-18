@@ -1,6 +1,6 @@
 import base64
-import binascii
 import hashlib
+from collections.abc import Callable
 
 # domain separation prefixes according to the RFC
 RFC6962_LEAF_HASH_PREFIX = 0
@@ -8,28 +8,30 @@ RFC6962_NODE_HASH_PREFIX = 1
 
 
 class Hasher:
-    def __init__(self, hash_func=hashlib.sha256):
+    def __init__(
+        self, hash_func: Callable[[], "hashlib._Hash"] = hashlib.sha256
+    ) -> None:
         self.hash_func = hash_func
 
-    def new(self):
+    def new(self) -> "hashlib._Hash":
         return self.hash_func()
 
-    def empty_root(self):
+    def empty_root(self) -> bytes:
         return self.new().digest()
 
-    def hash_leaf(self, leaf):
+    def hash_leaf(self, leaf: bytes) -> bytes:
         h = self.new()
         h.update(bytes([RFC6962_LEAF_HASH_PREFIX]))
         h.update(leaf)
         return h.digest()
 
-    def hash_children(self, left, right):
+    def hash_children(self, left: bytes, right: bytes) -> bytes:
         h = self.new()
         b = bytes([RFC6962_NODE_HASH_PREFIX]) + left + right
         h.update(b)
         return h.digest()
 
-    def size(self):
+    def size(self) -> int:
         return self.new().digest_size
 
 
@@ -37,10 +39,12 @@ class Hasher:
 DefaultHasher = Hasher(hashlib.sha256)
 
 
-def verify_consistency(hasher, size1, size2, proof, root1, root2):
+def verify_consistency(
+    hasher: Hasher, size1: int, size2: int, proof: list[str], root1: str, root2: str
+) -> None:
     # change format of args to be bytearray instead of hex strings
-    root1 = bytes.fromhex(root1)
-    root2 = bytes.fromhex(root2)
+    root1_bytes = bytes.fromhex(root1)
+    root2_bytes = bytes.fromhex(root2)
     bytearray_proof = []
     for elem in proof:
         bytearray_proof.append(bytes.fromhex(elem))
@@ -50,7 +54,7 @@ def verify_consistency(hasher, size1, size2, proof, root1, root2):
     if size1 == size2:
         if bytearray_proof:
             raise ValueError("size1=size2, but bytearray_proof is not empty")
-        verify_match(root1, root2)
+        verify_match(root1_bytes, root2_bytes)
         return
     if size1 == 0:
         if bytearray_proof:
@@ -66,7 +70,7 @@ def verify_consistency(hasher, size1, size2, proof, root1, root2):
     inner -= shift
 
     if size1 == 1 << shift:
-        seed, start = root1, 0
+        seed, start = root1_bytes, 0
     else:
         seed, start = bytearray_proof[0], 1
 
@@ -81,29 +85,29 @@ def verify_consistency(hasher, size1, size2, proof, root1, root2):
     mask = (size1 - 1) >> shift
     hash1 = chain_inner_right(hasher, seed, bytearray_proof[:inner], mask)
     hash1 = chain_border_right(hasher, hash1, bytearray_proof[inner:])
-    verify_match(hash1, root1)
+    verify_match(hash1, root1_bytes)
 
     hash2 = chain_inner(hasher, seed, bytearray_proof[:inner], mask)
     hash2 = chain_border_right(hasher, hash2, bytearray_proof[inner:])
-    verify_match(hash2, root2)
+    verify_match(hash2, root2_bytes)
 
 
-def verify_match(calculated, expected):
+def verify_match(calculated: bytes, expected: bytes) -> None:
     if calculated != expected:
         raise RootMismatchError(expected, calculated)
 
 
-def decomp_incl_proof(index, size):
+def decomp_incl_proof(index: int, size: int) -> tuple[int, int]:
     inner = inner_proof_size(index, size)
     border = bin(index >> inner).count("1")
     return inner, border
 
 
-def inner_proof_size(index, size):
+def inner_proof_size(index: int, size: int) -> int:
     return (index ^ (size - 1)).bit_length()
 
 
-def chain_inner(hasher, seed, proof, index):
+def chain_inner(hasher: Hasher, seed: bytes, proof: list[bytes], index: int) -> bytes:
     for i, h in enumerate(proof):
         if (index >> i) & 1 == 0:
             seed = hasher.hash_children(seed, h)
@@ -112,32 +116,36 @@ def chain_inner(hasher, seed, proof, index):
     return seed
 
 
-def chain_inner_right(hasher, seed, proof, index):
+def chain_inner_right(
+    hasher: Hasher, seed: bytes, proof: list[bytes], index: int
+) -> bytes:
     for i, h in enumerate(proof):
         if (index >> i) & 1 == 1:
             seed = hasher.hash_children(h, seed)
     return seed
 
 
-def chain_border_right(hasher, seed, proof):
+def chain_border_right(hasher: Hasher, seed: bytes, proof: list[bytes]) -> bytes:
     for h in proof:
         seed = hasher.hash_children(h, seed)
     return seed
 
 
 class RootMismatchError(Exception):
-    def __init__(self, expected_root, calculated_root):
-        self.expected_root = binascii.hexlify(bytearray(expected_root))
-        self.calculated_root = binascii.hexlify(bytearray(calculated_root))
+    def __init__(self, expected_root: bytes, calculated_root: bytes) -> None:
+        self.expected_root = expected_root.hex()
+        self.calculated_root = calculated_root.hex()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"calculated root:\n{self.calculated_root}\n"
             f" does not match expected root:\n{self.expected_root}"
         )
 
 
-def root_from_inclusion_proof(hasher, index, size, leaf_hash, proof):
+def root_from_inclusion_proof(
+    hasher: Hasher, index: int, size: int, leaf_hash: bytes, proof: list[bytes]
+) -> bytes:
     if index >= size:
         raise ValueError(f"index is beyond size: {index} >= {size}")
 
@@ -155,7 +163,15 @@ def root_from_inclusion_proof(hasher, index, size, leaf_hash, proof):
     return res
 
 
-def verify_inclusion(hasher, index, size, leaf_hash, proof, root, debug=False):
+def verify_inclusion(
+    hasher: Hasher,
+    index: int,
+    size: int,
+    leaf_hash: str,
+    proof: list[str],
+    root: str,
+    debug: bool = False,
+) -> None:
     bytearray_proof = []
     for elem in proof:
         bytearray_proof.append(bytes.fromhex(elem))
@@ -173,7 +189,7 @@ def verify_inclusion(hasher, index, size, leaf_hash, proof, root, debug=False):
 
 # requires entry["body"] output for a log entry
 # returns the leaf hash according to the rfc 6962 spec
-def compute_leaf_hash(body):
+def compute_leaf_hash(body: str) -> str:
     entry_bytes = base64.b64decode(body)
 
     # create a new sha256 hash object

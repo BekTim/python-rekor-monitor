@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
 
 # extracts and returns public key from a given cert (in pem format)
-def extract_public_key(cert):
+def extract_public_key(cert: bytes) -> bytes:
     # read the certificate
     #    with open("cert.pem", "rb") as cert_file:
     #        cert_data = cert_file.read()
@@ -32,7 +32,9 @@ def extract_public_key(cert):
     return pem_public_key
 
 
-def verify_artifact_signature(signature, public_key, artifact_filename):
+def verify_artifact_signature(
+    signature: bytes, public_key: bytes, artifact_filename: str
+) -> bool:
     # load the public key
     # with open("cert_public.pem", "rb") as pub_key_file:
     #    public_key = load_pem_public_key(pub_key_file.read())
@@ -41,14 +43,17 @@ def verify_artifact_signature(signature, public_key, artifact_filename):
     #    with open("hello.sig", "rb") as sig_file:
     #        signature = sig_file.read()
 
-    public_key = load_pem_public_key(public_key)
+    loaded_key = load_pem_public_key(public_key)
+    if not isinstance(loaded_key, ec.EllipticCurvePublicKey):
+        print("Unsupported key type: expected an elliptic-curve key")
+        return False
     # load the data to be verified
     with open(artifact_filename, "rb") as data_file:
         data = data_file.read()
 
     # verify the signature
     try:
-        public_key.verify(signature, data, ec.ECDSA(hashes.SHA256()))
+        loaded_key.verify(signature, data, ec.ECDSA(hashes.SHA256()))
         return True
     except InvalidSignature:
         print("Signature is invalid")
