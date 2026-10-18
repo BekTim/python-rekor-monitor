@@ -15,7 +15,14 @@ def get_log_entry(log_index, debug=False):
     if response.status_code != 200:
         raise Exception(f"Rekor error: {response.status_code}")
     data = response.json()
+    if not isinstance(data, dict) or not data:
+        raise ValueError(f"Unexpected response from Rekor for log index {log_index}")
+
     entry = list(data.values())[0]
+    if entry.get("logIndex") != log_index:
+        raise ValueError(
+            f"Rekor returned entry {entry.get('logIndex')}, expected {log_index}"
+        )
 
     return entry
 
