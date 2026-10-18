@@ -9,7 +9,8 @@ import os
 def get_log_entry(log_index, debug=False):
     if log_index < 0:
         raise ValueError("Invalid log index")
-    
+    if debug:
+        print(f"Fetching log entry {log_index} from Rekor")
     response = requests.get(f"https://rekor.sigstore.dev/api/v1/log/entries?logIndex={log_index}")
     if response.status_code != 200:
         raise Exception(f"Rekor error: {response.status_code}")
@@ -19,7 +20,7 @@ def get_log_entry(log_index, debug=False):
     return entry
 
 def get_verification_proof(log_index, debug=False):
-    entry = get_log_entry(log_index)
+    entry = get_log_entry(log_index,debug)
     return entry["verification"]["inclusionProof"]
 
 def inclusion(log_index, artifact_filepath, debug=False):
@@ -27,7 +28,7 @@ def inclusion(log_index, artifact_filepath, debug=False):
     if not os.path.isfile(artifact_filepath):
         print("Artifact file not found")
         return
-    entry = get_log_entry(log_index)
+    entry = get_log_entry(log_index,debug)
     body = entry["body"]
 
     body_temp = entry["body"]
@@ -41,7 +42,7 @@ def inclusion(log_index, artifact_filepath, debug=False):
     if not result:
         print("Signature verification failed")
         return
-    proof = get_verification_proof(log_index)
+    proof = get_verification_proof(log_index,debug)
 
     index = proof["logIndex"]
     tree_size = proof["treeSize"]
@@ -50,7 +51,7 @@ def inclusion(log_index, artifact_filepath, debug=False):
 
     leaf_hash = compute_leaf_hash(body_temp)
 
-    verify_inclusion(DefaultHasher, index, tree_size, leaf_hash, hashes, root_hash)
+    verify_inclusion(DefaultHasher, index, tree_size, leaf_hash, hashes, root_hash, debug)
     print("Offline verification successful")
     
 def get_latest_checkpoint(debug=False):
@@ -58,6 +59,9 @@ def get_latest_checkpoint(debug=False):
     if response.status_code != 200:
             raise Exception(f"Rekor error: {response.status_code}")
     data = response.json()
+    if debug:
+        with open("checkpoint.json", "w", encoding="utf-8") as checkpoint_file:
+            json.dump(data, checkpoint_file, indent=4)
     return data
 
 def consistency(prev_checkpoint, debug=False):
