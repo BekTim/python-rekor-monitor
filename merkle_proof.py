@@ -73,7 +73,7 @@ def verify_consistency(hasher, size1, size2, proof, root1, root2):
     if len(bytearray_proof) != start + inner + border:
         raise ValueError(
             f"wrong bytearray_proof size {len(bytearray_proof)}, "
-            "want {start + inner + border}"
+            f"want {start + inner + border}"
         )
 
     bytearray_proof = bytearray_proof[start:]
