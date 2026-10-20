@@ -40,3 +40,11 @@ exclude = ["tests"]
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--cov=. --cov-report=term-missing"
+
+[tool.coverage.run]
+omit = ["tests/*", "scripts/*"]
