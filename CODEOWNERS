@@ -1,0 +1,15 @@
+# Owners are automatically requested for review on pull requests
+# that touch the matching files.
+# Syntax: <file pattern> <@GitHub-user or @org/team> ...
+
+# Default owner for everything in the repository
+*                       @BekTim
+
+# Security-critical code: signature and Merkle proof verification
+util.py                 @BekTim
+merkle_proof.py         @BekTim
+
+# Supply chain configuration: dependencies, tooling and hooks
+pyproject.toml          @BekTim
+poetry.lock             @BekTim
+.pre-commit-config.yaml @BekTim
